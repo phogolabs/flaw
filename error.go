@@ -238,16 +238,64 @@ func (errs ErrorCollector) Format(state fmt.State, verb rune) {
 	}
 }
 
+// Is reports whether any error in err's chain matches target.
+//
+// The chain consists of err itself followed by the sequence of errors obtained by
+// repeatedly calling Unwrap.
+//
+// An error is considered to match a target if it is equal to that target or if
+// it implements a method Is(error) bool such that Is(target) returns true.
+func (errs ErrorCollector) Is(target error) bool {
+	items, ok := target.(ErrorCollector)
+
+	if !ok {
+		items = ErrorCollector{target}
+	}
+
+	if len(errs) != len(items) {
+		return false
+	}
+
+	for index, child := range errs {
+		if !errors.Is(child, items[index]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// As finds the first error in err's chain that matches target, and if so, sets
+// target to that error value and returns true.
+//
+// The chain consists of err itself followed by the sequence of errors obtained by
+// repeatedly calling Unwrap.
+//
+// An error matches target if the error's concrete value is assignable to the value
+// pointed to by target, or if the error has a method As(interface{}) bool such that
+// As(target) returns true. In the latter case, the As method is responsible for
+// setting target.
+//
+// As will panic if target is not a non-nil pointer to either a type that implements
+// error, or to any interface type. As returns false if err is nil.
+func (errs ErrorCollector) As(err interface{}) bool {
+	for _, child := range errs {
+		if errors.As(child, err) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Unwrap unwraps the underlying error
 func (errs ErrorCollector) Unwrap() error {
 	count := len(errs)
 
 	switch {
-	case count == 0:
-		return nil
 	case count == 1:
 		return errs[0]
 	default:
-		return errs
+		return nil
 	}
 }

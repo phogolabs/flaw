@@ -2,6 +2,7 @@ package flaw_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -106,6 +107,69 @@ var _ = Describe("ErrorCollection", func() {
 		})
 	})
 
+	Describe("Is", func() {
+		It("returns true", func() {
+			err := fmt.Errorf("not found")
+
+			errs := flaw.ErrorCollector{}
+			errs = append(errs, err)
+
+			Expect(errors.Is(errs, err)).To(BeTrue())
+		})
+
+		Context("when the target is collector", func() {
+			It("returns true", func() {
+				child := fmt.Errorf("oh no")
+
+				target := flaw.ErrorCollector{}
+				target = append(target, child)
+
+				errs := flaw.ErrorCollector{}
+				errs = append(errs, child)
+
+				Expect(errors.Is(errs, target)).To(BeTrue())
+			})
+		})
+
+		Context("when the error cannot be found", func() {
+			It("returns false", func() {
+				err := fmt.Errorf("not found")
+
+				errs := flaw.ErrorCollector{}
+				errs = append(errs, fmt.Errorf("oh no"))
+
+				Expect(errors.Is(errs, err)).To(BeFalse())
+			})
+		})
+	})
+
+	Describe("As", func() {
+		It("returns true", func() {
+			var err *flaw.Error
+
+			errs := flaw.ErrorCollector{}
+			errs = append(errs, fmt.Errorf("oh no"))
+			errs = append(errs, flaw.New("not found"))
+
+			Expect(errors.As(errs, &err)).To(BeTrue())
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(HavePrefix("message: not found"))
+		})
+
+		Context("when the error cannot be found", func() {
+			It("returns false", func() {
+				var err *flaw.Error
+
+				errs := flaw.ErrorCollector{}
+				errs = append(errs, fmt.Errorf("oh no"))
+				errs = append(errs, fmt.Errorf("oh yes"))
+
+				Expect(errors.As(errs, &err)).To(BeFalse())
+				Expect(err).To(BeNil())
+			})
+		})
+	})
+
 	Describe("Unwrap", func() {
 		It("unwraps the first error", func() {
 			errs := flaw.ErrorCollector{}
@@ -122,11 +186,11 @@ var _ = Describe("ErrorCollection", func() {
 
 		Context("when the collector has more than one error", func() {
 			Describe("Unwrap", func() {
-				It("unwraps the errors as itself", func() {
+				It("unwraps the errors as nil", func() {
 					errs := flaw.ErrorCollector{}
 					errs = append(errs, fmt.Errorf("oh no"))
 					errs = append(errs, fmt.Errorf("oh yes"))
-					Expect(errs.Unwrap()).To(Equal(errs))
+					Expect(errs.Unwrap()).To(BeNil())
 				})
 			})
 		})
