@@ -52,7 +52,7 @@ func Wrap(err error) *Error {
 	return errx
 }
 
-// WithMessage creates an error copy with given err
+// WithError creates an error copy with given error wrapped
 func (x Error) WithError(err error) *Error {
 	x.reason = err
 	x.stack = NewStackTrace()
