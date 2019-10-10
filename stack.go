@@ -48,6 +48,19 @@ func (frame StackFrame) name() string {
 	return fn.Name()
 }
 
+func (frame StackFrame) short() string {
+	name := frame.name()
+	withoutPath := name[strings.LastIndex(name, "/")+1:]
+	withoutPackage := withoutPath[strings.Index(withoutPath, ".")+1:]
+
+	shortName := withoutPackage
+	shortName = strings.Replace(shortName, "(", "", 1)
+	shortName = strings.Replace(shortName, "*", "", 1)
+	shortName = strings.Replace(shortName, ")", "", 1)
+
+	return shortName
+}
+
 // Format formats the frame according to the fmt.Formatter interface.
 //
 //    %s    source file
@@ -57,36 +70,31 @@ func (frame StackFrame) name() string {
 //
 // Format accepts flags that alter the printing of some verbs, as follows:
 //
-//    %+s   function name and path of source file relative to the compile time
-//          GOPATH separated by \n\t (<funcname>\n\t<path>)
-//    %+v   equivalent to %+s:%d
+//    %+s   source file full path
+//    %+v   equivalent to %+s:%d (%n)
 func (frame StackFrame) Format(state fmt.State, verb rune) {
 	switch verb {
+	case 'v':
+		frame.Format(state, 's')
+		fmt.Fprintf(state, ":")
+		frame.Format(state, 'd')
+
+		if state.Flag('+') {
+			fmt.Fprintf(state, " (")
+			frame.Format(state, 'n')
+			fmt.Fprintf(state, ")")
+		}
 	case 's':
 		switch {
 		case state.Flag('+'):
 			fmt.Fprint(state, frame.file())
-			fmt.Fprint(state, ":")
-			frame.Format(state, 'd')
-			fmt.Fprintf(state, " (%s)", frame.name())
 		default:
 			fmt.Fprint(state, path.Base(frame.file()))
-			fmt.Fprint(state, ":")
-			frame.Format(state, 'd')
 		}
 	case 'd':
 		fmt.Fprint(state, strconv.Itoa(frame.line()))
 	case 'n':
-		fmt.Fprint(state, funcname(frame.name()))
-	case 'v':
-		switch {
-		case state.Flag('+'):
-			frame.Format(state, 's')
-		default:
-			fmt.Fprint(state, frame.file())
-			fmt.Fprint(state, ":")
-			frame.Format(state, 'd')
-		}
+		fmt.Fprint(state, frame.short())
 	}
 }
 
@@ -99,7 +107,8 @@ func (frame StackFrame) MarshalText() ([]byte, error) {
 		return []byte(name), nil
 	}
 
-	return []byte(fmt.Sprintf("%s %s:%d", name, frame.file(), frame.line())), nil
+	text := fmt.Sprintf("%s:%d (%s)", frame.file(), frame.line(), name)
+	return []byte(text), nil
 }
 
 // StackTrace is stack of StackFrames from innermost (newest) to outermost (oldest).
@@ -139,30 +148,39 @@ func (stack *StackTrace) Skip(n int) {
 //    %+v   Prints filename, function, and line number for each StackFrame in the stack.
 func (stack StackTrace) Format(state fmt.State, verb rune) {
 	switch verb {
+	case 's':
+		fallthrough
 	case 'v':
 		switch {
 		case state.Flag('+'):
-			for _, frame := range stack {
-				fmt.Fprint(state, " --- ")
-				frame.Format(state, verb)
-				fmt.Fprint(state, "\n")
-			}
+			stack.formatBullet(state, verb)
+		case state.Flag('#'):
+			fmt.Fprintf(state, "%#v", []StackFrame(stack))
 		default:
 			stack.formatSlice(state, verb)
 		}
-	case 's':
-		stack.formatSlice(state, verb)
 	}
 }
 
-// formatSlice will format this StackTrace into the given buffer as a slice of
-// StackFrame, only valid when called with '%s' or '%v'.
+func (stack StackTrace) formatBullet(state fmt.State, verb rune) {
+	count := len(stack)
+
+	for index, frame := range stack {
+		fmt.Fprint(state, " --- ")
+		frame.Format(state, verb)
+
+		if index < count-1 {
+			fmt.Fprint(state, "\n")
+		}
+	}
+}
+
 func (stack StackTrace) formatSlice(state fmt.State, verb rune) {
 	fmt.Fprint(state, "[")
 
 	for index, frame := range stack {
 		if index > 0 {
-			fmt.Fprint(state, " ")
+			fmt.Fprint(state, ", ")
 		}
 
 		frame.Format(state, verb)
@@ -195,12 +213,4 @@ func (trace *stack) StackTrace() StackTrace {
 	}
 
 	return frames
-}
-
-// funcname removes the path prefix component of a function's name reported by func.Name().
-func funcname(name string) string {
-	i := strings.LastIndex(name, "/")
-	name = name[i+1:]
-	i = strings.Index(name, ".")
-	return name[i+1:]
 }

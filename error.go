@@ -11,20 +11,12 @@ var (
 	_ json.Marshaler = &Error{}
 )
 
-// ErrorData represents the error's data
-type ErrorData struct {
-	Code    int             `json:"code,omitempty"`
-	Message string          `json:"message,omitempty"`
-	Details []string        `json:"details,omitempty"`
-	Reason  json.RawMessage `json:"reason,omitempty"`
-}
-
 // Error represents a wrapped error
 type Error struct {
 	code    int
 	status  int
 	msg     string
-	details []string
+	details StringSlice
 	stack   StackTrace
 	reason  error
 }
@@ -33,6 +25,7 @@ type Error struct {
 func New(msg string, details ...string) *Error {
 	return &Error{
 		msg:     msg,
+		status:  500,
 		stack:   NewStackTrace(),
 		details: details,
 	}
@@ -44,6 +37,7 @@ func Wrap(err error) *Error {
 
 	if !errors.As(err, &errx) {
 		errx = &Error{
+			status: 500,
 			reason: err,
 			stack:  NewStackTrace(),
 		}
@@ -65,15 +59,15 @@ func (x Error) WithMessage(text string) *Error {
 	return &x
 }
 
-// WithStatus creates an error copy with given status
-func (x Error) WithStatus(status int) *Error {
-	x.status = status
-	return &x
-}
-
 // WithCode creates an error copy with given status
 func (x Error) WithCode(code int) *Error {
 	x.code = code
+	return &x
+}
+
+// WithStatus creates an error copy with given status
+func (x Error) WithStatus(status int) *Error {
+	x.status = status
 	return &x
 }
 
@@ -98,61 +92,69 @@ func (x *Error) Unwrap() error {
 	return x.reason
 }
 
-// StackTrace returns the stack trace where the error occurred
-func (x *Error) StackTrace() StackTrace {
-	return x.stack
-}
-
 // Error returns the error message
 func (x *Error) Error() string {
 	return fmt.Sprintf("%v", x)
 }
 
-// Format the error as string
+// StackTrace returns the stack trace where the error occurred
+func (x *Error) StackTrace() StackTrace {
+	return x.stack
+}
+
+// Format formats the frame according to the fmt.Formatter interface.
+//
+//    %m    error message
+//    %c    error code
+//    %r    error reason
+//    %v    code: %d message: %s reason: %w
+//
+// Format accepts flags that alter the printing of some verbs, as follows:
+//
+//    %+s   stack trace
+//    %+v   equivalent
 func (x *Error) Format(state fmt.State, verb rune) {
-	separate := func() {
-		separator := " "
+	switch verb {
+	case 'c':
+		fmt.Fprintf(state, "%d", x.code)
+	case 'm':
+		fmt.Fprintf(state, "%s", x.msg)
+	case 'r':
+		fmt.Fprintf(state, "%v", x.reason)
+	case 'd':
+		x.details.Format(state, 'v')
+	case 's':
+		x.stack.Format(state, 'v')
+	case 'v':
+		formatter := NewState(state)
+		defer formatter.Flush()
 
-		if verb == 'v' && state.Flag('+') {
-			separator = "\n"
+		if x.code != 0 {
+			formatter.title("code:")
+			x.Format(formatter, 'c')
 		}
 
-		fmt.Fprint(state, separator)
-	}
-
-	if x.code != 0 {
-		fmt.Fprintf(state, "code: %d", x.code)
-		separate()
-	}
-
-	if x.msg != "" {
-		fmt.Fprintf(state, "message: %s", x.msg)
-		separate()
-	}
-
-	if x.reason != nil {
-		fmt.Fprint(state, "reason: ")
-
-		if _, ok := x.reason.(ErrorCollector); ok {
-			separate()
+		if x.msg != "" {
+			formatter.title("message:")
+			x.Format(formatter, 'm')
 		}
 
-		if formatter, ok := x.reason.(fmt.Formatter); ok {
-			formatter.Format(state, verb)
-		} else {
-			fmt.Fprint(state, x.reason.Error())
+		if x.details != nil {
+			formatter.title("details:")
+			formatter.newline()
+			x.Format(formatter, 'd')
 		}
 
-		if _, ok := x.reason.(ErrorCollector); !ok {
-			separate()
+		if x.reason != nil {
+			formatter.title("cause:")
+			x.Format(formatter, 'r')
 		}
-	}
 
-	if x.stack != nil {
-		fmt.Fprint(state, "stack:")
-		separate()
-
-		x.stack.Format(state, verb)
+		if x.stack != nil && state.Flag('+') {
+			formatter.title("stack:")
+			formatter.newline()
+			x.Format(formatter, 's')
+		}
 	}
 }
 
@@ -176,7 +178,7 @@ func (x *Error) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 
-		data.Reason = buffer
+		data.Cause = buffer
 	}
 
 	return json.Marshal(data)
@@ -209,33 +211,46 @@ func (errs ErrorCollector) MarshalJSON() ([]byte, error) {
 
 // Format the error as string
 func (errs ErrorCollector) Format(state fmt.State, verb rune) {
-	// write as singleline string
-	var (
-		separator string
-		prefix    string
-		count     = len(errs)
-	)
-
-	if count > 1 {
-		separator = "; "
+	switch verb {
+	case 's':
+		fallthrough
+	case 'v':
+		switch {
+		case state.Flag('+'):
+			errs.formatBullet(state, verb)
+		case state.Flag('#'):
+			fmt.Fprintf(state, "%#v", []error(errs))
+		default:
+			errs.formatSlice(state, verb)
+		}
 	}
+}
 
-	if verb == 'v' && state.Flag('+') {
-		separator = "\n"
-		prefix = " --- "
+func (errs ErrorCollector) formatBullet(state fmt.State, verb rune) {
+	count := len(errs)
+
+	for index, err := range errs {
+		fmt.Fprint(state, " --- ")
+		fmt.Fprintf(state, "%v", err)
+
+		if index < count-1 {
+			fmt.Fprint(state, "\n")
+		}
 	}
+}
 
-	for _, item := range errs {
-		fmt.Fprint(state, prefix)
+func (errs ErrorCollector) formatSlice(state fmt.State, verb rune) {
+	fmt.Fprint(state, "[")
 
-		if formatter, ok := item.(fmt.Formatter); ok {
-			formatter.Format(state, verb)
-		} else {
-			fmt.Fprint(state, item.Error())
+	for index, err := range errs {
+		if index > 0 {
+			fmt.Fprint(state, ", ")
 		}
 
-		fmt.Fprint(state, separator)
+		fmt.Fprintf(state, "%v", err)
 	}
+
+	fmt.Fprint(state, "]")
 }
 
 // Is reports whether any error in err's chain matches target.
@@ -288,7 +303,12 @@ func (errs ErrorCollector) As(err interface{}) bool {
 	return false
 }
 
-// Unwrap unwraps the underlying error
+// Wrap appends an error to the slice
+func (errs *ErrorCollector) Wrap(err error) {
+	*errs = append(*errs, err)
+}
+
+// Unwrap unwraps the underlying error it's only one
 func (errs ErrorCollector) Unwrap() error {
 	count := len(errs)
 
@@ -298,4 +318,30 @@ func (errs ErrorCollector) Unwrap() error {
 	default:
 		return nil
 	}
+}
+
+// Code returns the code from an error
+func Code(err error) int {
+	type Coder interface {
+		Code() int
+	}
+
+	if coder, ok := err.(Coder); ok {
+		return coder.Code()
+	}
+
+	return 0
+}
+
+// Status returns the status from an error
+func Status(err error) int {
+	type Statuser interface {
+		Status() int
+	}
+
+	if status, ok := err.(Statuser); ok {
+		return status.Status()
+	}
+
+	return 0
 }
