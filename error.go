@@ -15,6 +15,15 @@ var (
 // Map is an alias to map[string]interface{}
 type Map = map[string]interface{}
 
+// ErrorConstant represents an error that can create a constant / sentinel
+// error such as io.EOF
+type ErrorConstant string
+
+// Error returns the error message
+func (x ErrorConstant) Error() string {
+	return fmt.Sprintf("%v", x)
+}
+
 // Error represents a wrapped error
 type Error struct {
 	code    int
