@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
 	_ error          = &Error{}
 	_ json.Marshaler = &Error{}
 )
+
+// Map is an alias to map[string]interface{}
+type Map = map[string]interface{}
 
 // Error represents a wrapped error
 type Error struct {
@@ -18,16 +22,18 @@ type Error struct {
 	msg     string
 	details StringSlice
 	stack   StackTrace
+	context map[string]interface{}
 	reason  error
 }
 
 // New creates a new error
 func New(msg string, details ...string) *Error {
 	return &Error{
-		msg:     msg,
 		status:  500,
-		stack:   NewStackTrace(),
+		msg:     msg,
 		details: details,
+		context: Map{},
+		stack:   NewStackTrace(),
 	}
 }
 
@@ -37,9 +43,10 @@ func Wrap(err error) *Error {
 
 	if !errors.As(err, &errx) {
 		errx = &Error{
-			status: 500,
-			reason: err,
-			stack:  NewStackTrace(),
+			status:  500,
+			reason:  err,
+			context: Map{},
+			stack:   NewStackTrace(),
 		}
 	}
 
@@ -71,6 +78,16 @@ func (x Error) WithStatus(status int) *Error {
 	return &x
 }
 
+// WithContext creates an error copy with given map
+func (x Error) WithContext(context Map) *Error {
+	if context == nil {
+		context = Map{}
+	}
+
+	x.context = context
+	return &x
+}
+
 // Code returns the error code
 func (x *Error) Code() int {
 	return x.code
@@ -97,9 +114,19 @@ func (x *Error) Error() string {
 	return fmt.Sprintf("%v", x)
 }
 
+// Cause returns the underlying error
+func (x *Error) Cause() error {
+	return x.reason
+}
+
 // StackTrace returns the stack trace where the error occurred
 func (x *Error) StackTrace() StackTrace {
 	return x.stack
+}
+
+// Context returns the error's context
+func (x *Error) Context() Map {
+	return x.data()
 }
 
 // Format formats the frame according to the fmt.Formatter interface.
@@ -160,28 +187,55 @@ func (x *Error) Format(state fmt.State, verb rune) {
 
 // MarshalJSON marshals the error as json
 func (x *Error) MarshalJSON() ([]byte, error) {
-	data := &ErrorData{
-		Code:    x.code,
-		Message: x.msg,
-		Details: x.details,
-	}
+	data := x.data(keyStack)
 
 	if x.reason != nil {
-		var input interface{} = x.reason
-
-		if _, ok := x.reason.(json.Marshaler); !ok {
-			input = x.reason.Error()
+		if _, ok := x.reason.(json.Marshaler); ok {
+			data[keyCause] = x.reason
 		}
-
-		buffer, err := json.Marshal(input)
-		if err != nil {
-			return nil, err
-		}
-
-		data.Cause = buffer
 	}
 
 	return json.Marshal(data)
+}
+
+func (x *Error) data(keys ...string) Map {
+	m := Map{}
+
+	set := func(field string, value interface{}) {
+		for _, key := range keys {
+			if strings.EqualFold(key, field) {
+				return
+			}
+		}
+
+		m[field] = value
+	}
+
+	if x.code > 0 {
+		set(keyCode, x.code)
+	}
+
+	if x.msg != "" {
+		set(keyMessage, x.msg)
+	}
+
+	if len(x.details) > 0 {
+		set(keyDetails, x.details)
+	}
+
+	if x.reason != nil {
+		set(keyCause, x.reason.Error())
+	}
+
+	if x.stack != nil {
+		set(keyStack, x.stack)
+	}
+
+	for k, v := range x.context {
+		set(k, v)
+	}
+
+	return m
 }
 
 var _ error = ErrorCollector{}

@@ -1,20 +1,18 @@
 package flaw
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"text/tabwriter"
 )
 
-// ErrorData represents the error's data
-type ErrorData struct {
-	Code    int             `json:"error_code,omitempty"`
-	Message string          `json:"error_message,omitempty"`
-	Details []string        `json:"error_details,omitempty"`
-	Cause   json.RawMessage `json:"error_cause,omitempty"`
-	Stack   StackTrace      `json:"error_stack,omitempty"`
-}
+const (
+	keyCode    = "error_code"
+	keyMessage = "error_message"
+	keyDetails = "error_details"
+	keyCause   = "error_cause"
+	keyStack   = "error_stack"
+)
 
 var _ fmt.State = &State{}
 

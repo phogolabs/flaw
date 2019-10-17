@@ -75,7 +75,8 @@ var _ = Describe("Error", func() {
 
 			data, err := json.Marshal(errx)
 			Expect(err).To(BeNil())
-			Expect(string(data)).To(Equal(`{"error_code":200,"error_message":"oh no","error_cause":"failed"}`))
+
+			Expect(string(data)).To(Equal(`{"error_cause":"failed","error_code":200,"error_message":"oh no"}`))
 		})
 
 		Context("when the wrapped error implements MarshalJSON", func() {
@@ -85,7 +86,7 @@ var _ = Describe("Error", func() {
 
 				data, err := json.Marshal(errx)
 				Expect(err).To(BeNil())
-				Expect(string(data)).To(Equal(`{"error_code":200,"error_message":"oh no","error_cause":{"error_message":"failed"}}`))
+				Expect(string(data)).To(Equal(`{"error_cause":{"error_message":"failed"},"error_code":200,"error_message":"oh no"}`))
 			})
 		})
 	})
