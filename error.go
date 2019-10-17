@@ -34,6 +34,11 @@ func (x ErrorConstant) Error() string {
 	return fmt.Sprintf("%v", x)
 }
 
+// Format formats the error
+func (x ErrorConstant) Format(state fmt.State, verb rune) {
+	fmt.Fprintf(state, "%v", string(x))
+}
+
 // Error represents a wrapped error
 type Error struct {
 	code    int
@@ -316,7 +321,13 @@ func (errs ErrorCollector) Format(state fmt.State, verb rune) {
 		case state.Flag('+'):
 			errs.formatBullet(state, verb)
 		case state.Flag('#'):
-			fmt.Fprintf(state, "%#v", []error(errs))
+			items := make([]error, len(errs))
+
+			for index, err := range errs {
+				items[index] = ErrorConstant(err.Error())
+			}
+
+			fmt.Fprintf(state, "%#v", []error(items))
 		default:
 			errs.formatSlice(state, verb)
 		}

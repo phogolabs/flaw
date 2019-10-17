@@ -13,8 +13,10 @@ import (
 
 var _ = Describe("Error", func() {
 	It("creates an error successfully", func() {
-		err := flaw.New("oh no")
-		Expect(err).To(MatchError("message: oh no"))
+		err := flaw.New("oh no", "some more details")
+		Expect(err).To(MatchError("message: oh no details: [some more details]"))
+		Expect(fmt.Sprintf("%d", err)).To(Equal("[some more details]"))
+		Expect(err.Context()).To(HaveKey("error_details"))
 	})
 
 	It("wraps an error successfully", func() {
@@ -29,12 +31,34 @@ var _ = Describe("Error", func() {
 			Expect(err.Error()).To(HavePrefix("code: 200 message: oh no"))
 			Expect(err.Code()).To(Equal(200))
 		})
+
+		It("returns the code", func() {
+			err := flaw.New("oh no").WithCode(200)
+			Expect(flaw.Code(err)).To(Equal(200))
+		})
+
+		Context("when the error does not have code", func() {
+			It("returns no code", func() {
+				Expect(flaw.Code(fmt.Errorf("oh no"))).To(Equal(0))
+			})
+		})
 	})
 
 	Describe("WithStatus", func() {
 		It("creates an error successfully", func() {
 			err := flaw.New("oh no").WithStatus(200)
 			Expect(err.Status()).To(Equal(200))
+		})
+
+		It("returns the status", func() {
+			err := flaw.New("oh no").WithStatus(200)
+			Expect(flaw.Status(err)).To(Equal(200))
+		})
+
+		Context("when the error does not have status", func() {
+			It("returns no status", func() {
+				Expect(flaw.Status(fmt.Errorf("oh no"))).To(Equal(0))
+			})
 		})
 	})
 
@@ -43,6 +67,8 @@ var _ = Describe("Error", func() {
 			err := flaw.New("failed").WithError(fmt.Errorf("oh no"))
 			Expect(err.Error()).To(HavePrefix("message: failed cause: oh no"))
 			Expect(err.Unwrap()).To(MatchError("oh no"))
+			Expect(err.Cause()).To(MatchError("oh no"))
+			Expect(err.StackTrace()).NotTo(BeEmpty())
 		})
 	})
 
@@ -51,6 +77,20 @@ var _ = Describe("Error", func() {
 			err := flaw.Wrap(fmt.Errorf("oh no")).WithMessage("failed")
 			Expect(err.Error()).To(HavePrefix("message: failed cause: oh no"))
 			Expect(err.Unwrap()).To(MatchError("oh no"))
+		})
+	})
+
+	Describe("WithContext", func() {
+		It("creates an error successfully", func() {
+			err := flaw.Wrap(fmt.Errorf("oh no")).WithContext(flaw.Map{"user": "root"})
+			Expect(err.Context()).To(HaveKeyWithValue("user", "root"))
+		})
+
+		Context("when the context is nil", func() {
+			It("creates an error successfully", func() {
+				err := flaw.Wrap(fmt.Errorf("oh no")).WithContext(nil)
+				Expect(err.Context()).To(HaveKeyWithValue("error_cause", "oh no"))
+			})
 		})
 	})
 
@@ -130,6 +170,21 @@ var _ = Describe("ErrorCollection", func() {
 
 				Expect(errors.Is(errs, target)).To(BeTrue())
 			})
+
+			Context("when the target has more items", func() {
+				It("returns false", func() {
+					child := fmt.Errorf("oh no")
+
+					target := flaw.ErrorCollector{}
+					target = append(target, child)
+					target = append(target, fmt.Errorf("oh yes"))
+
+					errs := flaw.ErrorCollector{}
+					errs = append(errs, child)
+
+					Expect(errors.Is(errs, target)).To(BeFalse())
+				})
+			})
 		})
 
 		Context("when the error cannot be found", func() {
@@ -171,6 +226,18 @@ var _ = Describe("ErrorCollection", func() {
 		})
 	})
 
+	Describe("Wrap", func() {
+		It("wraps the errors", func() {
+			errs := flaw.ErrorCollector{}
+			errs.Wrap(fmt.Errorf("oh no"))
+			errs.Wrap(fmt.Errorf("oh yes"))
+
+			Expect(errs).To(HaveLen(2))
+			Expect(errs).To(ContainElement(fmt.Errorf("oh no")))
+			Expect(errs).To(ContainElement(fmt.Errorf("oh yes")))
+		})
+	})
+
 	Describe("Unwrap", func() {
 		It("unwraps the first error", func() {
 			errs := flaw.ErrorCollector{}
@@ -205,7 +272,25 @@ var _ = Describe("ErrorCollection", func() {
 			Expect(fmt.Sprintf("%v", errs)).To(Equal("[oh no, oh yes]"))
 		})
 
-		Context("when the verbose printing is used", func() {
+		Context("when the %s format is used", func() {
+			It("prints the error successfully", func() {
+				errs := flaw.ErrorCollector{}
+				errs = append(errs, fmt.Errorf("oh no"))
+				errs = append(errs, fmt.Errorf("oh yes"))
+				Expect(fmt.Sprintf("%s", errs)).To(Equal("[oh no, oh yes]"))
+			})
+		})
+
+		Context("when the %#v format is used", func() {
+			It("prints the error successfully", func() {
+				errs := flaw.ErrorCollector{}
+				errs = append(errs, fmt.Errorf("oh no"))
+				errs = append(errs, fmt.Errorf("oh yes"))
+				Expect(fmt.Sprintf("%#v", errs)).To(Equal("[]error{oh no, oh yes}"))
+			})
+		})
+
+		Context("when the %v format is used", func() {
 			It("prints the error successfully", func() {
 				errs := flaw.ErrorCollector{}
 				errs = append(errs, fmt.Errorf("oh no"))
@@ -235,5 +320,12 @@ var _ = Describe("ErrorCollection", func() {
 				Expect(string(data)).To(Equal(`[{"error_message":"oh no"}]`))
 			})
 		})
+	})
+})
+
+var _ = Describe("ErrorConstant", func() {
+	It("creates a error constant successfully", func() {
+		const err = flaw.ErrorConstant("EOF")
+		Expect(err).To(MatchError("EOF"))
 	})
 })
