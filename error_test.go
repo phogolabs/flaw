@@ -17,6 +17,7 @@ var _ = Describe("Error", func() {
 		Expect(err).To(MatchError("message: oh no details: [some more details]"))
 		Expect(fmt.Sprintf("%d", err)).To(Equal("[some more details]"))
 		Expect(err.Context()).To(HaveKey("error_details"))
+		Expect(flaw.Details(err)).To(ContainElement("some more details"))
 	})
 
 	It("wraps an error successfully", func() {
@@ -62,28 +63,60 @@ var _ = Describe("Error", func() {
 		})
 	})
 
-	Describe("WithError", func() {
-		It("creates an error successfully", func() {
-			err := flaw.New("failed").WithError(fmt.Errorf("oh no"))
-			Expect(err.Error()).To(HavePrefix("message: failed cause: oh no"))
-			Expect(err.Unwrap()).To(MatchError("oh no"))
-			Expect(err.Cause()).To(MatchError("oh no"))
-			Expect(err.StackTrace()).NotTo(BeEmpty())
-		})
-	})
-
 	Describe("WithMessage", func() {
 		It("creates an error successfully", func() {
 			err := flaw.Wrap(fmt.Errorf("oh no")).WithMessage("failed")
 			Expect(err.Error()).To(HavePrefix("message: failed cause: oh no"))
 			Expect(err.Unwrap()).To(MatchError("oh no"))
+			Expect(flaw.Message(err)).To(Equal("failed"))
+		})
+
+		Context("when the error does not have a message", func() {
+			It("returns an empty message", func() {
+				Expect(flaw.Message(fmt.Errorf("oh no"))).To(BeEmpty())
+			})
+		})
+	})
+
+	Describe("WithDetails", func() {
+		It("creates an error successfully", func() {
+			err := flaw.New("oh no").WithDetails("some more details")
+			Expect(flaw.Details(err)).To(ContainElement("some more details"))
+		})
+
+		Context("when the error does not have details", func() {
+			It("returns no details", func() {
+				Expect(flaw.Details(fmt.Errorf("oh no"))).To(BeEmpty())
+			})
+		})
+	})
+
+	Describe("WithError", func() {
+		It("creates an error successfully", func() {
+			err := flaw.New("failed").WithError(fmt.Errorf("oh no"))
+			Expect(err.Error()).To(HavePrefix("message: failed cause: oh no"))
+			Expect(err.Unwrap()).To(MatchError("oh no"))
+			Expect(flaw.Cause(err)).To(MatchError("oh no"))
+			Expect(err.StackTrace()).NotTo(BeEmpty())
+		})
+
+		Context("when the error is not causer", func() {
+			It("returns nil cause", func() {
+				Expect(flaw.Cause(fmt.Errorf("oh no"))).To(MatchError("oh no"))
+			})
 		})
 	})
 
 	Describe("WithContext", func() {
 		It("creates an error successfully", func() {
 			err := flaw.Wrap(fmt.Errorf("oh no")).WithContext(flaw.Map{"user": "root"})
-			Expect(err.Context()).To(HaveKeyWithValue("user", "root"))
+			Expect(flaw.Context(err)).To(HaveKeyWithValue("user", "root"))
+		})
+
+		Context("when the error does not have context", func() {
+			It("returns nil context", func() {
+				Expect(flaw.Context(fmt.Errorf("oh no"))).To(BeEmpty())
+			})
 		})
 
 		Context("when the context is nil", func() {

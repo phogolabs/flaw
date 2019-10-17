@@ -90,6 +90,13 @@ func (x Error) WithMessage(text string) *Error {
 	return &x
 }
 
+// WithDetails creates an error copy with given details
+func (x Error) WithDetails(text string, details ...string) *Error {
+	x.details = append(x.details, text)
+	x.details = append(x.details, details...)
+	return &x
+}
+
 // WithCode creates an error copy with given status
 func (x Error) WithCode(code int) *Error {
 	x.code = code
@@ -122,20 +129,14 @@ func (x *Error) Status() int {
 	return x.status
 }
 
-// Wrap wraps the given error
-func (x *Error) Wrap(err error) {
-	x.stack = NewStackTrace()
-	x.reason = err
+// Message returns the error message
+func (x *Error) Message() string {
+	return x.msg
 }
 
-// Unwrap unwraps the underlying error
-func (x *Error) Unwrap() error {
-	return x.reason
-}
-
-// Error returns the error message
-func (x *Error) Error() string {
-	return fmt.Sprintf("%v", x)
+// Details returns the error details
+func (x *Error) Details() []string {
+	return x.details
 }
 
 // Cause returns the underlying error
@@ -151,6 +152,22 @@ func (x *Error) StackTrace() StackTrace {
 // Context returns the error's context
 func (x *Error) Context() Map {
 	return x.data()
+}
+
+// Wrap wraps the given error
+func (x *Error) Wrap(err error) {
+	x.stack = NewStackTrace()
+	x.reason = err
+}
+
+// Unwrap unwraps the underlying error
+func (x *Error) Unwrap() error {
+	return x.reason
+}
+
+// Error returns the error message
+func (x *Error) Error() string {
+	return fmt.Sprintf("%v", x)
 }
 
 // Format formats the frame according to the fmt.Formatter interface.
@@ -452,4 +469,56 @@ func Status(err error) int {
 	}
 
 	return 0
+}
+
+// Cause returns the error's cause
+func Cause(err error) error {
+	type Causer interface {
+		Cause() error
+	}
+
+	if causer, ok := err.(Causer); ok {
+		return causer.Cause()
+	}
+
+	return err
+}
+
+// Message returns the error's message
+func Message(err error) string {
+	type Messanger interface {
+		Message() string
+	}
+
+	if messanger, ok := err.(Messanger); ok {
+		return messanger.Message()
+	}
+
+	return ""
+}
+
+// Details returns the error's details
+func Details(err error) []string {
+	type Detailer interface {
+		Details() []string
+	}
+
+	if detailer, ok := err.(Detailer); ok {
+		return detailer.Details()
+	}
+
+	return []string{}
+}
+
+// Context returns the error's context
+func Context(err error) Map {
+	type Contexter interface {
+		Context() Map
+	}
+
+	if contexter, ok := err.(Contexter); ok {
+		return contexter.Context()
+	}
+
+	return Map{}
 }
