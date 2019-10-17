@@ -62,15 +62,21 @@ func New(msg string, details ...string) *Error {
 }
 
 // Wrap wraps an error
-func Wrap(err error) *Error {
+func Wrap(err error, frames ...StackFrame) *Error {
 	var errx *Error
 
 	if !errors.As(err, &errx) {
+		stack := StackTrace(frames)
+
+		if len(stack) == 0 {
+			stack = NewStackTrace()
+		}
+
 		errx = &Error{
 			status:  500,
 			reason:  err,
 			context: Map{},
-			stack:   NewStackTrace(),
+			stack:   stack,
 		}
 	}
 
