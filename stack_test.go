@@ -22,13 +22,13 @@ var _ = Describe("StackTrace", func() {
 	Describe("Format", func() {
 		It("prints the stack successfully", func() {
 			stack := flaw.NewStackTrace()
-			Expect(fmt.Sprintf("%v", stack)).To(ContainSubstring("[runner.go:113"))
+			Expect(fmt.Sprintf("%v", stack)).To(ContainSubstring("[github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113"))
 		})
 
 		Context("when the %#v format is used", func() {
 			It("prints the stack successfully", func() {
 				stack := flaw.NewStackTrace()
-				Expect(fmt.Sprintf("%#v", stack)).To(ContainSubstring("[]flaw.StackFrame{runner.go:113"))
+				Expect(fmt.Sprintf("%#v", stack)).To(ContainSubstring("[]flaw.StackFrame{github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113"))
 			})
 		})
 
@@ -42,7 +42,7 @@ var _ = Describe("StackTrace", func() {
 		Context("when the %s format is used", func() {
 			It("prints the stack successfully", func() {
 				stack := flaw.NewStackTrace()
-				Expect(fmt.Sprintf("%s", stack)).To(HavePrefix("[runner.go"))
+				Expect(fmt.Sprintf("%s", stack)).To(HavePrefix("[github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go"))
 			})
 		})
 

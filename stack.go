@@ -2,7 +2,8 @@ package flaw
 
 import (
 	"fmt"
-	"path"
+	"go/build"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -41,7 +42,16 @@ func (frame StackFrame) Format(state fmt.State, verb rune) {
 		case state.Flag('+'):
 			fmt.Fprint(state, frame.File)
 		default:
-			fmt.Fprint(state, path.Base(frame.File))
+			path := frame.File
+
+			if root := build.Default.GOPATH; root != "" {
+				if file, err := filepath.Rel(root, path); err == nil {
+					path = strings.TrimPrefix(file, "src/")
+					path = strings.TrimPrefix(path, "pkg/mod/")
+				}
+			}
+
+			fmt.Fprint(state, path)
 		}
 	case 'd':
 		fmt.Fprint(state, strconv.Itoa(frame.Line))
