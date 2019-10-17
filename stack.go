@@ -11,55 +11,7 @@ import (
 // StackFrame represents a program counter inside a stack frame.
 // For historical reasons if StackFrame is interpreted as a uintptr
 // its value represents the program counter + 1.
-type StackFrame uintptr
-
-// pc returns the program counter for this frame;
-// multiple frames may have the same PC value.
-func (frame StackFrame) pc() uintptr { return uintptr(frame) - 1 }
-
-// file returns the full path to the file that contains the
-// function for this StackFrame's pc.
-func (frame StackFrame) file() string {
-	fn := runtime.FuncForPC(frame.pc())
-	if fn == nil {
-		return "unknown"
-	}
-	file, _ := fn.FileLine(frame.pc())
-	return file
-}
-
-// line returns the line number of source code of the
-// function for this StackFrame's pc.
-func (frame StackFrame) line() int {
-	fn := runtime.FuncForPC(frame.pc())
-	if fn == nil {
-		return 0
-	}
-	_, line := fn.FileLine(frame.pc())
-	return line
-}
-
-// name returns the name of this function, if known.
-func (frame StackFrame) name() string {
-	fn := runtime.FuncForPC(frame.pc())
-	if fn == nil {
-		return "unknown"
-	}
-	return fn.Name()
-}
-
-func (frame StackFrame) short() string {
-	name := frame.name()
-	withoutPath := name[strings.LastIndex(name, "/")+1:]
-	withoutPackage := withoutPath[strings.Index(withoutPath, ".")+1:]
-
-	shortName := withoutPackage
-	shortName = strings.Replace(shortName, "(", "", 1)
-	shortName = strings.Replace(shortName, "*", "", 1)
-	shortName = strings.Replace(shortName, ")", "", 1)
-
-	return shortName
-}
+type StackFrame runtime.Frame
 
 // Format formats the frame according to the fmt.Formatter interface.
 //
@@ -87,28 +39,34 @@ func (frame StackFrame) Format(state fmt.State, verb rune) {
 	case 's':
 		switch {
 		case state.Flag('+'):
-			fmt.Fprint(state, frame.file())
+			fmt.Fprint(state, frame.File)
 		default:
-			fmt.Fprint(state, path.Base(frame.file()))
+			fmt.Fprint(state, path.Base(frame.File))
 		}
 	case 'd':
-		fmt.Fprint(state, strconv.Itoa(frame.line()))
+		fmt.Fprint(state, strconv.Itoa(frame.Line))
 	case 'n':
-		fmt.Fprint(state, frame.short())
+		name := frame.Function
+		withoutPath := name[strings.LastIndex(name, "/")+1:]
+		withoutPackage := withoutPath[strings.Index(withoutPath, ".")+1:]
+
+		name = withoutPackage
+		name = strings.Replace(name, "(", "", 1)
+		name = strings.Replace(name, "*", "", 1)
+		name = strings.Replace(name, ")", "", 1)
+
+		fmt.Fprint(state, name)
 	}
 }
 
 // MarshalText formats a stacktrace StackFrame as a text string. The output is the
 // same as that of fmt.Sprintf("%+v", f), but without newlines or tabs.
 func (frame StackFrame) MarshalText() ([]byte, error) {
-	name := frame.name()
-
-	if name == "unknown" {
+	if name := frame.Function; name == "unknown" {
 		return []byte(name), nil
 	}
 
-	text := fmt.Sprintf("%s:%d (%s)", frame.file(), frame.line(), name)
-	return []byte(text), nil
+	return []byte(fmt.Sprintf("%+v", frame)), nil
 }
 
 // StackTrace is stack of StackFrames from innermost (newest) to outermost (oldest).
@@ -116,17 +74,21 @@ type StackTrace []StackFrame
 
 // NewStackTrace creates a new StackTrace
 func NewStackTrace() StackTrace {
-	const depth = 32
-
 	var (
-		pcs   [depth]uintptr
-		trace stack
+		stack  = make([]uintptr, 32)
+		size   = runtime.Callers(3, stack[:])
+		frames = runtime.CallersFrames(stack[:size])
+		trace  = StackTrace{}
 	)
 
-	n := runtime.Callers(3, pcs[:])
-	trace = pcs[0:n]
+	for {
+		frame, ok := frames.Next()
+		if !ok {
+			return trace
+		}
 
-	return trace.StackTrace()
+		trace = append(trace, StackFrame(frame))
+	}
 }
 
 // Skip frames for given count
@@ -187,30 +149,4 @@ func (stack StackTrace) formatSlice(state fmt.State, verb rune) {
 	}
 
 	fmt.Fprint(state, "]")
-}
-
-// stack represents a stack of program counters.
-type stack []uintptr
-
-func (trace *stack) Format(state fmt.State, verb rune) {
-	switch verb {
-	case 'v':
-		switch {
-		case state.Flag('+'):
-			for _, pc := range *trace {
-				frame := StackFrame(pc)
-				fmt.Fprintf(state, "\n%+v", frame)
-			}
-		}
-	}
-}
-
-func (trace *stack) StackTrace() StackTrace {
-	frames := make([]StackFrame, len(*trace))
-
-	for index := 0; index < len(frames); index++ {
-		frames[index] = StackFrame((*trace)[index])
-	}
-
-	return frames
 }
