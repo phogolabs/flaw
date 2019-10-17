@@ -101,13 +101,18 @@ func NewStackTrace() StackTrace {
 	}
 }
 
-// Skip frames for given count
-func (stack *StackTrace) Skip(n int) {
-	count := len(*stack)
+// NewStackTraceAt creates a new stack trace at given position
+func NewStackTraceAt(n int) StackTrace {
+	n = n + 1
+	stack := NewStackTrace()
+
+	count := len(stack)
 
 	if n > 0 && n < count {
-		*stack = StackTrace((*stack)[n:])
+		stack = StackTrace(stack[n:])
 	}
+
+	return stack
 }
 
 // Format formats the stack of StackFrames according to the fmt.Formatter interface.

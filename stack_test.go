@@ -10,12 +10,14 @@ import (
 )
 
 var _ = Describe("StackTrace", func() {
-	Describe("Skip", func() {
+	Describe("NewStackTraceAt", func() {
 		It("skips a frame successfully", func() {
-			stack := flaw.NewStackTrace()
-			count := len(stack)
-			stack.Skip(1)
-			Expect(count).To(Equal(len(stack) + 1))
+			var (
+				stack   = flaw.NewStackTrace()
+				skipped = flaw.NewStackTraceAt(1)
+			)
+
+			Expect(len(stack)).To(Equal(len(skipped) + 1))
 		})
 	})
 
