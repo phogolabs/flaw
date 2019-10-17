@@ -173,9 +173,10 @@ func (x *Error) Error() string {
 // Format formats the frame according to the fmt.Formatter interface.
 //
 //    %m    error message
+//    %d    error details
 //    %c    error code
 //    %r    error reason
-//    %v    code: %d message: %s reason: %w
+//    %v    code: %d message: %s details: %d reason: %w
 //
 // Format accepts flags that alter the printing of some verbs, as follows:
 //
