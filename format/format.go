@@ -1,17 +1,9 @@
-package flaw
+package format
 
 import (
 	"fmt"
 	"io"
 	"text/tabwriter"
-)
-
-const (
-	keyCode    = "error_code"
-	keyMessage = "error_message"
-	keyDetails = "error_details"
-	keyCause   = "error_cause"
-	keyStack   = "error_stack"
 )
 
 var _ fmt.State = &State{}
@@ -76,28 +68,9 @@ func (w *State) Flush() error {
 	return nil
 }
 
-func (w *State) title(text string) {
-	if w.size > 0 {
-		if w.Flag('+') {
-			fmt.Fprint(w, "\n")
-		} else {
-			fmt.Fprint(w, " ")
-		}
-	}
-
-	fmt.Fprint(w, text)
-
-	if w.Flag('+') {
-		fmt.Fprint(w, "\t")
-	}
-
-	fmt.Fprint(w, " ")
-}
-
-func (w *State) newline() {
-	if w.Flag('+') {
-		fmt.Fprint(w.writer, "\n")
-	}
+// Size returns the size
+func (w *State) Size() int {
+	return w.size
 }
 
 // StringSlice represents a slice of string

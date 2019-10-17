@@ -5,6 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/phogolabs/flaw/format"
+)
+
+const (
+	keyCode    = "error_code"
+	keyMessage = "error_message"
+	keyDetails = "error_details"
+	keyCause   = "error_cause"
+	keyStack   = "error_stack"
 )
 
 var (
@@ -29,7 +39,7 @@ type Error struct {
 	code    int
 	status  int
 	msg     string
-	details StringSlice
+	details format.StringSlice
 	stack   StackTrace
 	context map[string]interface{}
 	reason  error
@@ -162,33 +172,57 @@ func (x *Error) Format(state fmt.State, verb rune) {
 	case 's':
 		x.stack.Format(state, 'v')
 	case 'v':
-		formatter := NewState(state)
+		formatter := format.NewState(state)
 		defer formatter.Flush()
 
+		title := func(text string) {
+			if formatter.Size() > 0 {
+				if formatter.Flag('+') {
+					fmt.Fprint(formatter, "\n")
+				} else {
+					fmt.Fprint(formatter, " ")
+				}
+			}
+
+			fmt.Fprint(formatter, text)
+
+			if formatter.Flag('+') {
+				fmt.Fprint(formatter, "\t")
+			}
+
+			fmt.Fprint(formatter, " ")
+		}
+
+		newline := func() {
+			if formatter.Flag('+') {
+				fmt.Fprint(formatter, "\n")
+			}
+		}
+
 		if x.code != 0 {
-			formatter.title("code:")
+			title("code:")
 			x.Format(formatter, 'c')
 		}
 
 		if x.msg != "" {
-			formatter.title("message:")
+			title("message:")
 			x.Format(formatter, 'm')
 		}
 
 		if x.details != nil {
-			formatter.title("details:")
-			formatter.newline()
+			title("details:")
+			newline()
 			x.Format(formatter, 'd')
 		}
 
 		if x.reason != nil {
-			formatter.title("cause:")
+			title("cause:")
 			x.Format(formatter, 'r')
 		}
 
 		if x.stack != nil && state.Flag('+') {
-			formatter.title("stack:")
-			formatter.newline()
+			title("stack:")
+			newline()
 			x.Format(formatter, 's')
 		}
 	}
