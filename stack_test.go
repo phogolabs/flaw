@@ -63,7 +63,7 @@ var _ = Describe("StackFrame", func() {
 			frame := flaw.NewStackTrace()[0]
 			data, err := frame.MarshalText()
 			Expect(err).To(BeNil())
-			Expect(string(data)).To(HaveSuffix("github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113 (runner.runSync)"))
+			Expect(string(data)).To(HavePrefix("github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113"))
 		})
 	})
 })

@@ -76,7 +76,7 @@ func (frame StackFrame) MarshalText() ([]byte, error) {
 		return []byte(name), nil
 	}
 
-	return []byte(fmt.Sprintf("%+v", frame)), nil
+	return []byte(fmt.Sprintf("%v", frame)), nil
 }
 
 // StackTrace is stack of StackFrames from innermost (newest) to outermost (oldest).
