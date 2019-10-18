@@ -2,11 +2,8 @@ package flaw
 
 import (
 	"fmt"
-	"go/build"
-	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 )
 
 // StackFrame represents a program counter inside a stack frame.
@@ -42,30 +39,12 @@ func (frame StackFrame) Format(state fmt.State, verb rune) {
 		case state.Flag('+'):
 			fmt.Fprint(state, frame.File)
 		default:
-			path := frame.File
-
-			if root := build.Default.GOPATH; root != "" {
-				if file, err := filepath.Rel(root, path); err == nil {
-					path = strings.TrimPrefix(file, "src/")
-					path = strings.TrimPrefix(path, "pkg/mod/")
-				}
-			}
-
-			fmt.Fprint(state, path)
+			fmt.Fprint(state, relative(frame.File))
 		}
 	case 'd':
 		fmt.Fprint(state, strconv.Itoa(frame.Line))
 	case 'n':
-		name := frame.Function
-		withoutPath := name[strings.LastIndex(name, "/")+1:]
-		withoutPackage := withoutPath[strings.Index(withoutPath, ".")+1:]
-
-		name = withoutPackage
-		name = strings.Replace(name, "(", "", 1)
-		name = strings.Replace(name, "*", "", 1)
-		name = strings.Replace(name, ")", "", 1)
-
-		fmt.Fprint(state, name)
+		fmt.Fprint(state, function(frame.Function))
 	}
 }
 
