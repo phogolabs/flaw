@@ -204,54 +204,30 @@ func (x *Error) Format(state fmt.State, verb rune) {
 		formatter := format.NewState(state)
 		defer formatter.Flush()
 
-		title := func(text string) {
-			if formatter.Size() > 0 {
-				if formatter.Flag('+') {
-					fmt.Fprint(formatter, "\n")
-				} else {
-					fmt.Fprint(formatter, " ")
-				}
-			}
-
-			fmt.Fprint(formatter, text)
-
-			if formatter.Flag('+') {
-				fmt.Fprint(formatter, "\t")
-			}
-
-			fmt.Fprint(formatter, " ")
-		}
-
-		newline := func() {
-			if formatter.Flag('+') {
-				fmt.Fprint(formatter, "\n")
-			}
-		}
-
 		if x.code != 0 {
-			title("code:")
+			x.title(formatter, "code:")
 			x.Format(formatter, 'c')
 		}
 
 		if x.msg != "" {
-			title("message:")
+			x.title(formatter, "message:")
 			x.Format(formatter, 'm')
 		}
 
 		if x.details != nil {
-			title("details:")
-			newline()
+			x.title(formatter, "details:")
+			x.newline(formatter)
 			x.Format(formatter, 'd')
 		}
 
 		if x.reason != nil {
-			title("cause:")
+			x.title(formatter, "cause:")
 			x.Format(formatter, 'r')
 		}
 
 		if x.stack != nil && state.Flag('+') {
-			title("stack:")
-			newline()
+			x.title(formatter, "stack:")
+			x.newline(formatter)
 			x.Format(formatter, 's')
 		}
 	}
@@ -308,6 +284,30 @@ func (x *Error) data(keys ...string) Map {
 	}
 
 	return m
+}
+
+func (x *Error) title(formatter *format.State, text string) {
+	if formatter.Size() > 0 {
+		if formatter.Flag('+') {
+			fmt.Fprint(formatter, "\n")
+		} else {
+			fmt.Fprint(formatter, " ")
+		}
+	}
+
+	fmt.Fprint(formatter, text)
+
+	if formatter.Flag('+') {
+		fmt.Fprint(formatter, "\t")
+	}
+
+	fmt.Fprint(formatter, " ")
+}
+
+func (x *Error) newline(formatter *format.State) {
+	if formatter.Flag('+') {
+		fmt.Fprint(formatter, "\n")
+	}
 }
 
 var _ error = ErrorCollector{}
