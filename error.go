@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"strings"
@@ -246,8 +247,21 @@ func (x *Error) MarshalJSON() ([]byte, error) {
 	return json.Marshal(data)
 }
 
-func (x *Error) data(keys ...string) Map {
-	m := Map{}
+// MarshalXML marshals the error as xml
+func (x *Error) MarshalXML(encoder *xml.Encoder, start xml.StartElement) error {
+	data := x.data(keyStack)
+
+	if x.reason != nil {
+		if _, ok := x.reason.(xml.Marshaler); ok {
+			data[keyCause] = x.reason
+		}
+	}
+
+	return data.MarshalXML(encoder, start)
+}
+
+func (x *Error) data(keys ...string) dictionary {
+	m := dictionary{}
 
 	set := func(field string, value interface{}) {
 		for _, key := range keys {
