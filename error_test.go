@@ -13,11 +13,8 @@ import (
 
 var _ = Describe("Error", func() {
 	It("creates an error successfully", func() {
-		err := flaw.New("oh no", "some more details")
-		Expect(err).To(MatchError("message: oh no details: [some more details]"))
-		Expect(fmt.Sprintf("%d", err)).To(Equal("[some more details]"))
-		Expect(err.Context()).To(HaveKey("error_details"))
-		Expect(flaw.Details(err)).To(ContainElement("some more details"))
+		err := flaw.Errorf("oh no")
+		Expect(err).To(MatchError("message: oh no"))
 	})
 
 	It("wraps an error successfully", func() {
@@ -28,13 +25,13 @@ var _ = Describe("Error", func() {
 
 	Describe("WithCode", func() {
 		It("creates an error successfully", func() {
-			err := flaw.New("oh no").WithCode(200)
+			err := flaw.Errorf("oh no").WithCode(200)
 			Expect(err.Error()).To(HavePrefix("code: 200 message: oh no"))
 			Expect(err.Code()).To(Equal(200))
 		})
 
 		It("returns the code", func() {
-			err := flaw.New("oh no").WithCode(200)
+			err := flaw.Errorf("oh no").WithCode(200)
 			Expect(flaw.Code(err)).To(Equal(200))
 		})
 
@@ -47,12 +44,12 @@ var _ = Describe("Error", func() {
 
 	Describe("WithStatus", func() {
 		It("creates an error successfully", func() {
-			err := flaw.New("oh no").WithStatus(200)
+			err := flaw.Errorf("oh no").WithStatus(200)
 			Expect(err.Status()).To(Equal(200))
 		})
 
 		It("returns the status", func() {
-			err := flaw.New("oh no").WithStatus(200)
+			err := flaw.Errorf("oh no").WithStatus(200)
 			Expect(flaw.Status(err)).To(Equal(200))
 		})
 
@@ -80,7 +77,7 @@ var _ = Describe("Error", func() {
 
 	Describe("WithDetails", func() {
 		It("creates an error successfully", func() {
-			err := flaw.New("oh no").WithDetails("some more details")
+			err := flaw.Errorf("oh no").WithDetails("some more details")
 			Expect(flaw.Details(err)).To(ContainElement("some more details"))
 		})
 
@@ -93,7 +90,7 @@ var _ = Describe("Error", func() {
 
 	Describe("WithError", func() {
 		It("creates an error successfully", func() {
-			err := flaw.New("failed").WithError(fmt.Errorf("oh no"))
+			err := flaw.Errorf("failed").WithError(fmt.Errorf("oh no"))
 			Expect(err.Error()).To(HavePrefix("message: failed cause: oh no"))
 			Expect(err.Unwrap()).To(MatchError("oh no"))
 			Expect(flaw.Cause(err)).To(MatchError("oh no"))
@@ -129,13 +126,13 @@ var _ = Describe("Error", func() {
 
 	Describe("Format", func() {
 		It("prints the error successfully", func() {
-			err := flaw.New("failed").WithCode(404).WithError(fmt.Errorf("oh no"))
+			err := flaw.Errorf("failed").WithCode(404).WithError(fmt.Errorf("oh no"))
 			Expect(fmt.Sprintf("%v", err)).To(Equal("code: 404 message: failed cause: oh no"))
 		})
 
 		Context("when the verbose printing is used", func() {
 			It("prints the error successfully", func() {
-				err := flaw.New("failed").WithCode(404).WithError(fmt.Errorf("oh no"))
+				err := flaw.Errorf("failed").WithCode(404).WithError(fmt.Errorf("oh no"))
 				Expect(fmt.Sprintf("%+v", err)).To(HavePrefix("    code: 404\n message: failed\n   cause: oh no\n   stack: \n"))
 			})
 		})
@@ -143,7 +140,7 @@ var _ = Describe("Error", func() {
 
 	Describe("MarshalJSON", func() {
 		It("marshals the error successfully", func() {
-			errx := flaw.New("oh no").WithCode(200)
+			errx := flaw.Errorf("oh no").WithCode(200)
 			errx.Wrap(fmt.Errorf("failed"))
 
 			data, err := json.Marshal(errx)
@@ -154,8 +151,8 @@ var _ = Describe("Error", func() {
 
 		Context("when the wrapped error implements MarshalJSON", func() {
 			It("marshals the error successfully", func() {
-				errx := flaw.New("oh no").WithCode(200)
-				errx.Wrap(flaw.New("failed"))
+				errx := flaw.Errorf("oh no").WithCode(200)
+				errx.Wrap(flaw.Errorf("failed"))
 
 				data, err := json.Marshal(errx)
 				Expect(err).To(BeNil())
@@ -238,7 +235,7 @@ var _ = Describe("ErrorCollection", func() {
 
 			errs := flaw.ErrorCollector{}
 			errs = append(errs, fmt.Errorf("oh no"))
-			errs = append(errs, flaw.New("not found"))
+			errs = append(errs, flaw.Errorf("not found"))
 
 			Expect(errors.As(errs, &err)).To(BeTrue())
 			Expect(err).NotTo(BeNil())
@@ -346,7 +343,7 @@ var _ = Describe("ErrorCollection", func() {
 		Context("when the child error implements MarshalJSON", func() {
 			It("marshals the error successfully", func() {
 				errs := flaw.ErrorCollector{}
-				errs = append(errs, flaw.New("oh no"))
+				errs = append(errs, flaw.Errorf("oh no"))
 
 				data, err := json.Marshal(errs)
 				Expect(err).To(BeNil())

@@ -51,12 +51,11 @@ type Error struct {
 	reason  error
 }
 
-// New creates a new error
-func New(msg string, details ...string) *Error {
+// Errorf creates a new error
+func Errorf(msg string, data ...interface{}) *Error {
 	return &Error{
 		status:  500,
-		msg:     msg,
-		details: details,
+		msg:     fmt.Sprintf(msg, data...),
 		context: Map{},
 		stack:   NewStackTrace(),
 	}
