@@ -6,6 +6,22 @@ import (
 	"text/tabwriter"
 )
 
+//go:generate counterfeiter -fake-name StateFlusher -o ./fake/flusher.go . StateFlusher
+
+// StateFlusher is a flushable state
+type StateFlusher interface {
+	// Write is the function to call to emit formatted output to be printed.
+	Write(b []byte) (n int, err error)
+	// Width returns the value of the width option and whether it has been set.
+	Width() (wid int, ok bool)
+	// Precision returns the value of the precision option and whether it has been set.
+	Precision() (prec int, ok bool)
+	// Flag reports whether the flag c, a character, has been set.
+	Flag(c int) bool
+	// Flush flushes the state
+	Flush() error
+}
+
 var _ fmt.State = &State{}
 
 // State wraps the state into desired writer
@@ -22,7 +38,7 @@ func NewState(state fmt.State) *State {
 		writer: state,
 	}
 
-	if state.Flag('+') {
+	if state != nil && state.Flag('+') {
 		wstate.writer = tabwriter.NewWriter(state, 0, 0, 1, ' ', tabwriter.AlignRight)
 	}
 
