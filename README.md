@@ -2,7 +2,7 @@
 
 [![Documentation][godoc-img]][godoc-url]
 ![License][license-img]
-[![Build Status][travis-img]][travis-url]
+[![Build Status][action-img]][action-url]
 [![Coverage][codecov-img]][codecov-url]
 [![Go Report Card][report-img]][report-url]
 
@@ -76,12 +76,12 @@ You can print the result with better formatting `fmt.Printf("%+v", errs)`:
 We are welcome to any contributions. Just fork the
 [project](https://github.com/phogolabs/flaw).
 
-[travis-img]: https://travis-ci.org/phogolabs/flaw.svg?branch=master
-[travis-url]: https://travis-ci.org/phogolabs/flaw
 [report-img]: https://goreportcard.com/badge/github.com/phogolabs/flaw
 [report-url]: https://goreportcard.com/report/github.com/phogolabs/flaw
 [codecov-url]: https://codecov.io/gh/phogolabs/flaw
 [codecov-img]: https://codecov.io/gh/phogolabs/flaw/branch/master/graph/badge.svg
+[action-img]: https://github.com/phogolabs/flaw/workflows/pipeline/badge.svg
+[action-url]: https://github.com/phogolabs/flaw/actions
 [godoc-url]: https://godoc.org/github.com/phogolabs/flaw
 [godoc-img]: https://godoc.org/github.com/phogolabs/flaw?status.svg
 [license-img]: https://img.shields.io/badge/license-MIT-blue.svg
