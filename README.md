@@ -73,8 +73,8 @@ You can print the result with better formatting `fmt.Printf("%+v", errs)`:
 
 ## Contributing
 
-We are welcome to any contributions. Just fork the
-[project](https://github.com/phogolabs/flaw).
+We are open for any contributions. Just fork the
+[project](https://github.com/phogolabs/stride).
 
 [report-img]: https://goreportcard.com/badge/github.com/phogolabs/flaw
 [report-url]: https://goreportcard.com/report/github.com/phogolabs/flaw
