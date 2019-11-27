@@ -74,7 +74,7 @@ You can print the result with better formatting `fmt.Printf("%+v", errs)`:
 ## Contributing
 
 We are open for any contributions. Just fork the
-[project](https://github.com/phogolabs/stride).
+[project](https://github.com/phogolabs/flaw).
 
 [report-img]: https://goreportcard.com/badge/github.com/phogolabs/flaw
 [report-url]: https://goreportcard.com/report/github.com/phogolabs/flaw
