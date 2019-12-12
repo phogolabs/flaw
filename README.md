@@ -80,7 +80,7 @@ We are open for any contributions. Just fork the
 [report-url]: https://goreportcard.com/report/github.com/phogolabs/flaw
 [codecov-url]: https://codecov.io/gh/phogolabs/flaw
 [codecov-img]: https://codecov.io/gh/phogolabs/flaw/branch/master/graph/badge.svg
-[action-img]: https://github.com/phogolabs/flaw/workflows/pipeline/badge.svg
+[action-img]: https://github.com/phogolabs/flaw/workflows/main/badge.svg
 [action-url]: https://github.com/phogolabs/flaw/actions
 [godoc-url]: https://godoc.org/github.com/phogolabs/flaw
 [godoc-img]: https://godoc.org/github.com/phogolabs/flaw?status.svg
