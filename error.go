@@ -155,6 +155,14 @@ func (x *Error) Cause() error {
 
 // GRPCStatus returns the grpc status of this error
 func (x *Error) GRPCStatus() *status.Status {
+	type Provider interface {
+		GRPCStatus() *status.Status
+	}
+
+	if provider, ok := x.reason.(Provider); ok {
+		return provider.GRPCStatus()
+	}
+
 	var (
 		code   = codes.Internal
 		buffer = &bytes.Buffer{}
