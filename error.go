@@ -1,6 +1,7 @@
 package flaw
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -8,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/phogolabs/flaw/format"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -148,6 +151,39 @@ func (x *Error) Details() []string {
 // Cause returns the underlying error
 func (x *Error) Cause() error {
 	return x.reason
+}
+
+// GRPCStatus returns the grpc status of this error
+func (x *Error) GRPCStatus() *status.Status {
+	var (
+		code   = codes.Internal
+		buffer = &bytes.Buffer{}
+	)
+
+	if x.code > 0 {
+		code = codes.Code(x.code)
+	}
+
+	if x.msg != "" {
+		fmt.Fprint(buffer, x.msg)
+	}
+
+	if x.reason != nil {
+		if buffer.Len() > 0 {
+			fmt.Fprint(buffer, ": ")
+		}
+
+		fmt.Fprintf(buffer, x.reason.Error())
+	}
+
+	errx := status.New(code, buffer.String())
+
+	for _, item := range x.details {
+		row := status.New(codes.Unknown, item)
+		errx.WithDetails(row.Proto())
+	}
+
+	return errx
 }
 
 // StackTrace returns the stack trace where the error occurred
