@@ -24,34 +24,34 @@ var _ = Describe("StackTrace", func() {
 	Describe("Format", func() {
 		It("prints the stack successfully", func() {
 			stack := flaw.NewStackTrace()
-			Expect(fmt.Sprintf("%v", stack)).To(ContainSubstring("[github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113"))
+			Expect(fmt.Sprintf("%v", stack)).To(ContainSubstring("leafnodes/runner.go"))
 		})
 
 		Context("when the %#v format is used", func() {
 			It("prints the stack successfully", func() {
 				stack := flaw.NewStackTrace()
-				Expect(fmt.Sprintf("%#v", stack)).To(ContainSubstring("[]flaw.StackFrame{github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113"))
+				Expect(fmt.Sprintf("%#v", stack)).To(ContainSubstring("[]flaw.StackFrame{"))
 			})
 		})
 
 		Context("when the %+v format is used", func() {
 			It("prints the stack successfully", func() {
 				stack := flaw.NewStackTrace()
-				Expect(fmt.Sprintf("%+v", stack)).To(ContainSubstring("github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go"))
+				Expect(fmt.Sprintf("%+v", stack)).To(ContainSubstring("leafnodes/runner.go"))
 			})
 		})
 
 		Context("when the %s format is used", func() {
 			It("prints the stack successfully", func() {
 				stack := flaw.NewStackTrace()
-				Expect(fmt.Sprintf("%s", stack)).To(HavePrefix("[github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go"))
+				Expect(fmt.Sprintf("%s", stack)).To(HavePrefix("[leafnodes/runner.go"))
 			})
 		})
 
 		Context("when the %+s format is used", func() {
 			It("prints the stack successfully", func() {
 				stack := flaw.NewStackTrace()
-				Expect(fmt.Sprintf("%+s", stack)).To(ContainSubstring("github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go"))
+				Expect(fmt.Sprintf("%+s", stack)).To(ContainSubstring("leafnodes/runner.go"))
 			})
 		})
 	})
@@ -63,7 +63,7 @@ var _ = Describe("StackFrame", func() {
 			frame := flaw.NewStackTrace()[0]
 			data, err := frame.MarshalText()
 			Expect(err).To(BeNil())
-			Expect(string(data)).To(HavePrefix("github.com/onsi/ginkgo@v1.10.2/internal/leafnodes/runner.go:113"))
+			Expect(string(data)).To(HavePrefix("leafnodes/runner.go"))
 		})
 	})
 })
