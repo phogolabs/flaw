@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/phogolabs/flaw/format"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -184,14 +186,23 @@ func (x *Error) GRPCStatus() *status.Status {
 		fmt.Fprintf(buffer, x.reason.Error())
 	}
 
-	errx := status.New(code, buffer.String())
+	state := status.New(code, buffer.String())
 
+	// prepare the details
 	for _, item := range x.details {
-		row := status.New(codes.Unknown, item)
-		errx.WithDetails(row.Proto())
+		// append the details
+		state, _ = state.WithDetails(&wrappers.StringValue{
+			Value: item,
+		})
 	}
 
-	return errx
+	// prepare the context
+	if details, err := structpb.NewStruct(x.context); err == nil {
+		// add the error as details
+		state, _ = state.WithDetails(details)
+	}
+
+	return state
 }
 
 // StackTrace returns the stack trace where the error occurred
