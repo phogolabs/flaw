@@ -186,23 +186,25 @@ func (x *Error) GRPCStatus() *status.Status {
 		fmt.Fprintf(buffer, x.reason.Error())
 	}
 
-	state := status.New(code, buffer.String())
+	payload := status.New(code, buffer.String())
 
 	// prepare the details
 	for _, item := range x.details {
 		// append the details
-		state, _ = state.WithDetails(&wrappers.StringValue{
+		payload, _ = payload.WithDetails(&wrappers.StringValue{
 			Value: item,
 		})
 	}
 
-	// prepare the context
-	if details, err := structpb.NewStruct(x.context); err == nil {
-		// add the error as details
-		state, _ = state.WithDetails(details)
+	if len(x.context) > 0 {
+		// prepare the context
+		if details, err := structpb.NewStruct(x.context); err == nil {
+			// add the error as details
+			payload, _ = payload.WithDetails(details)
+		}
 	}
 
-	return state
+	return payload
 }
 
 // StackTrace returns the stack trace where the error occurred
