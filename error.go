@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/phogolabs/flaw/format"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (
@@ -191,7 +191,7 @@ func (x *Error) GRPCStatus() *status.Status {
 	// prepare the details
 	for _, item := range x.details {
 		// append the details
-		payload, _ = payload.WithDetails(&wrappers.StringValue{
+		payload, _ = payload.WithDetails(&wrapperspb.StringValue{
 			Value: item,
 		})
 	}
@@ -235,16 +235,16 @@ func (x *Error) Error() string {
 
 // Format formats the frame according to the fmt.Formatter interface.
 //
-//    %m    error message
-//    %d    error details
-//    %c    error code
-//    %r    error reason
-//    %v    code: %d message: %s details: %d reason: %w
+//	%m    error message
+//	%d    error details
+//	%c    error code
+//	%r    error reason
+//	%v    code: %d message: %s details: %d reason: %w
 //
 // Format accepts flags that alter the printing of some verbs, as follows:
 //
-//    %+s   stack trace
-//    %+v   equivalent
+//	%+s   stack trace
+//	%+v   equivalent
 func (x *Error) Format(state fmt.State, verb rune) {
 	switch verb {
 	case 'c':
